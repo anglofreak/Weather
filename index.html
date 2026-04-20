@@ -5,13 +5,14 @@
 <meta name="viewport" content="width=800, height=480">
 
 <style>
-body {
+html, body {
   margin: 0;
-  background: #111;
-  color: white;
-  font-family: sans-serif;
+  padding: 0;
+  background: transparent !important; /* ✅ transparent */
+  overflow: hidden;
 }
 
+/* center icon */
 .container {
   display: flex;
   justify-content: center;
@@ -19,61 +20,60 @@ body {
   height: 100vh;
 }
 
-.tile {
-  background: #1e1e1e;
-  border-radius: 10px;
-  padding: 16px;
-  text-align: center;
-  width: 220px;
-}
-
+/* icon */
 .icon {
-  font-size: 48px;
-  margin: 10px 0;
-}
-
-.area {
-  font-size: 14px;
-  opacity: 0.8;
-}
-
-.forecast {
-  font-size: 13px;
+  font-size: 120px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container" id="app">Loading...</div>
+<div class="container" id="app">⏳</div>
 
 <script>
 const API = "https://api-open.data.gov.sg/v2/real-time/api/two-hr-forecast";
 
-function mapWeather(f) {
-  f = f.toLowerCase();
-
-  if (f.includes("thunder")) return "thunder";
-  if (f.includes("heavy")) return "heavy_rain";
-  if (f.includes("light")) return "light_rain";
-  if (f.includes("rain")) return "rain";
-  if (f.includes("partly")) return "partly_cloudy";
-  if (f.includes("cloud")) return "cloudy";
-  if (f.includes("sun") || f.includes("fair")) return "sunny";
-
-  return "unknown";
+/* Singapore time */
+function getSingaporeHour() {
+  const now = new Date();
+  return new Date(
+    now.toLocaleString("en-US", { timeZone: "Asia/Singapore" })
+  ).getHours();
 }
 
-const ICONS = {
-  sunny: "☀️",
-  cloudy: "☁️",
-  partly_cloudy: "⛅",
-  rain: "🌧️",
-  light_rain: "🌦️",
-  heavy_rain: "🌧️",
-  thunder: "⛈️",
-  unknown: "❓"
-};
+function isDayTime() {
+  const h = getSingaporeHour();
+  return h >= 7 && h < 19;
+}
+
+/* Weather → icon */
+function mapWeather(f) {
+  if (!f) return "❓";
+
+  f = f.toLowerCase();
+  const day = isDayTime();
+
+  if (f.includes("thunder")) return "⛈️";
+
+  if (f.includes("heavy")) return "🌧️";
+  if (f.includes("light") && (f.includes("rain") || f.includes("drizzle")))
+    return day ? "🌦️" : "🌧️";
+  if (f.includes("rain") || f.includes("showers")) return "🌧️";
+
+  if (f.includes("wind") || f.includes("gust")) return "🌬️";
+
+  if (f.includes("mist") || f.includes("haze")) return "🌫️";
+  if (f.includes("fog")) return "🌁";
+
+  if (f.includes("partly")) return day ? "⛅" : "🌙☁️";
+  if (f.includes("cloud") || f.includes("overcast")) return "☁️";
+
+  if (f.includes("sun") || f.includes("fair") || f.includes("clear"))
+    return day ? "☀️" : "🌙";
+
+  return "❓";
+}
 
 async function load() {
   try {
@@ -81,28 +81,24 @@ async function load() {
     const json = await res.json();
 
     const all = json.data.items[0].forecasts;
-
-    // 🔥 FILTER HERE
     const bukit = all.find(a => a.area === "Bukit Timah");
 
     if (!bukit) {
-      document.getElementById("app").innerHTML = "Bukit Timah data not available";
+      document.getElementById("app").innerHTML = "❓";
       return;
     }
 
-    document.getElementById("app").innerHTML = `
-      <div class="tile">
-        <div class="area">${bukit.area}</div>
-        <div class="icon">${ICONS[mapWeather(bukit.forecast)]}</div>
-        <div class="forecast">${bukit.forecast}</div>
-      </div>
-    `;
+    const icon = mapWeather(bukit.forecast);
+
+    document.getElementById("app").innerHTML =
+      `<div class="icon">${icon}</div>`;
 
   } catch (e) {
-    document.getElementById("app").innerHTML = "Weather unavailable";
+    document.getElementById("app").innerHTML = "❓";
   }
 }
 
+/* run */
 load();
 setInterval(load, 300000);
 </script>
