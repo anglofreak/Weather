@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=800, height=480">
+
+<style>
+body {
+  margin: 0;
+  background: #111;
+  color: white;
+  font-family: sans-serif;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.tile {
+  background: #1e1e1e;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  width: 220px;
+}
+
+.icon {
+  font-size: 48px;
+  margin: 10px 0;
+}
+
+.area {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.forecast {
+  font-size: 13px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container" id="app">Loading...</div>
+
+<script>
+const API = "https://api-open.data.gov.sg/v2/real-time/api/two-hr-forecast";
+
+function mapWeather(f) {
+  f = f.toLowerCase();
+
+  if (f.includes("thunder")) return "thunder";
+  if (f.includes("heavy")) return "heavy_rain";
+  if (f.includes("light")) return "light_rain";
+  if (f.includes("rain")) return "rain";
+  if (f.includes("partly")) return "partly_cloudy";
+  if (f.includes("cloud")) return "cloudy";
+  if (f.includes("sun") || f.includes("fair")) return "sunny";
+
+  return "unknown";
+}
+
+const ICONS = {
+  sunny: "☀️",
+  cloudy: "☁️",
+  partly_cloudy: "⛅",
+  rain: "🌧️",
+  light_rain: "🌦️",
+  heavy_rain: "🌧️",
+  thunder: "⛈️",
+  unknown: "❓"
+};
+
+async function load() {
+  try {
+    const res = await fetch(API);
+    const json = await res.json();
+
+    const all = json.data.items[0].forecasts;
+
+    // 🔥 FILTER HERE
+    const bukit = all.find(a => a.area === "Bukit Timah");
+
+    if (!bukit) {
+      document.getElementById("app").innerHTML = "Bukit Timah data not available";
+      return;
+    }
+
+    document.getElementById("app").innerHTML = `
+      <div class="tile">
+        <div class="area">${bukit.area}</div>
+        <div class="icon">${ICONS[mapWeather(bukit.forecast)]}</div>
+        <div class="forecast">${bukit.forecast}</div>
+      </div>
+    `;
+
+  } catch (e) {
+    document.getElementById("app").innerHTML = "Weather unavailable";
+  }
+}
+
+load();
+setInterval(load, 300000);
+</script>
+
+</body>
+</html>
